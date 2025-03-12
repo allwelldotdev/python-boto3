@@ -1,0 +1,14 @@
+[project]
+name = "boto3-101"
+version = "0.1.0"
+description = "Learning Python boto3 Library and testing AWS SDK services"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "boto3>=1.37.11",
+    "matplotlib>=3.10.1",
+    "notebook>=7.3.2",
+    "paramiko>=3.5.1",
+    "pillow>=11.1.0",
+    "requests>=2.32.3",
+]

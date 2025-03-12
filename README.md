@@ -1,0 +1,1 @@
+Learning Python boto3 Library and testing AWS SDK services with [Udemy course](https://www.udemy.com/course/master-aws-with-python-and-boto3/) by Jose Portilla.
