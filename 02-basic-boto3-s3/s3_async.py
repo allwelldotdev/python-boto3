@@ -210,9 +210,6 @@ async def delete_buckets_async(
                 for bucket in response["Buckets"]
                 if contains_name in bucket["Name"]
             ]
-            # buckets_to_delete = [
-            #     bucket for bucket in s3_buckets if contains_name in bucket
-            # ]
             if not buckets_to_delete:
                 raise ValueError(f"{contains_name} is not in S3 buckets.")
             await asyncio.gather(
@@ -235,10 +232,11 @@ def time_logger(fn):
         async def inner():
             start_time = perf_counter()
             await fn()
+            fn.time_to_run = perf_counter() - start_time
             print(
                 "\n"
                 + "\033[91m"
-                + f"Time elapsed: {perf_counter() - start_time:.2f} seconds"
+                + f"Time elapsed: {fn.time_to_run:.2f} seconds"
                 + "\033[0m"
                 + "\n"
             )  # red color
@@ -249,10 +247,11 @@ def time_logger(fn):
         def inner():
             start_time = perf_counter()
             fn()
+            fn.time_to_run = perf_counter() - start_time
             print(
                 "\n"
                 + "\033[91m"
-                + f"Time elapsed: {perf_counter() - start_time:.2f} seconds"
+                + f"Time elapsed: {fn.time_to_run:.2f} seconds"
                 + "\033[0m"
             )  # red color
 
@@ -261,8 +260,11 @@ def time_logger(fn):
 
 @time_logger
 def main():
-    print("\n" + "\033[36m" + "running synchronous functions")  # cyan color
-    print(f"{'-' * 25}" + "\n" + "\033[0m")
+    print(
+        "\n" + "\033[36m" + "running synchronous functions",  # cyan color
+        f"{'-' * 25}" + "\n" + "\033[0m",
+        sep="\n",
+    )
     print(
         "pre-existed s3_buckets:", list_s3_bucket()
     )  # show current list of s3 buckets
@@ -272,17 +274,21 @@ def main():
     )  # show bucket names created
     delete_buckets(bucket_name_generator.names)  # delete newly-created s3 buckets
     print(
-        "\n" + "generated_bucket_names after deletion:", bucket_name_generator.names
-    )  # bucket names should be empty now
-    print(
-        "\n" + "current s3_buckets:", list_s3_bucket()
-    )  # show current list of s3 buckets
+        "\n"
+        + f"generated_bucket_names after deletion: {bucket_name_generator.names}",  # bucket names should be empty now
+        "\n"
+        + f"current s3_buckets: {list_s3_bucket()}",  # show current list of s3 buckets
+        sep="\n",
+    )
 
 
 @time_logger
 async def main_async():
-    print("\n" + "\033[36m" + "running asynchronous functions")  # cyan color
-    print(f"{'-' * 25}" + "\n" + "\033[0m")
+    print(
+        "\n" + "\033[36m" + "running asynchronous functions",  # cyan color
+        f"{'-' * 25}" + "\n" + "\033[0m",
+        sep="\n",
+    )
     print(
         "pre-existed s3_buckets:", await list_s3_bucket_async()
     )  # show current list of s3 buckets
@@ -295,14 +301,47 @@ async def main_async():
         bucket_name_generator_async.names
     )  # delete newly-created s3 buckets
     print(
-        "\n" + "generated_bucket_names after deletion:",
-        bucket_name_generator_async.names,
-    )  # bucket names should be empty now
-    print(
-        "\n" + "current s3_buckets:", await list_s3_bucket_async()
-    )  # show current list of s3 buckets
+        "\n"
+        + f"generated_bucket_names after deletion: {bucket_name_generator_async.names}",  # bucket names should be empty now
+        "\n"
+        + f"current s3_buckets: {await list_s3_bucket_async()}",  # show current list of s3 buckets
+        sep="\n",
+    )
+
+
+def perf_diff(sync_time: float, async_time: float) -> float:
+    """Calculates the performance difference between Synchronous Functions and Asynchronous Functions
+
+    Parameters
+    ----------
+    `sync_time` : float
+        Time it took synchronous functions to run.
+    `async_time` : float
+        Time it took asynchronouns functions to run.
+
+    Returns
+    -------
+    float
+        Time percentage difference.
+    """
+    diff = sync_time - async_time
+    percentage_diff = (diff / sync_time) * 100
+    return percentage_diff
 
 
 if __name__ == "__main__":
-    main()
-    asyncio.run(main_async())
+    main()  # run synchronous function
+    asyncio.run(main_async())  # run asynchronous functions
+
+    # grab `time_to_run` function attribute from closures
+    sync_time = main.__closure__[0].cell_contents.time_to_run
+    async_time = main_async.__closure__[0].cell_contents.time_to_run
+
+    # calculate relative time difference between synchronous and asynchronous functions
+    print(
+        "\033[35m" + f"{'-' * 25}",
+        f"Asynchronous is faster than synchronous by {perf_diff(sync_time, async_time):.2f}%"
+        + "\033[0m"
+        + "\n",
+        sep="\n",
+    )
