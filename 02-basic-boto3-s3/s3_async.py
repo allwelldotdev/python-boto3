@@ -205,10 +205,14 @@ async def delete_buckets_async(
         # delete buckets using `contains_name` value *asynchronously
         if contains_name:
             response = await s3.list_buckets()
-            s3_buckets = [bucket["Name"] for bucket in response["Buckets"]]
             buckets_to_delete = [
-                bucket for bucket in s3_buckets if contains_name in bucket
+                bucket["Name"]
+                for bucket in response["Buckets"]
+                if contains_name in bucket["Name"]
             ]
+            # buckets_to_delete = [
+            #     bucket for bucket in s3_buckets if contains_name in bucket
+            # ]
             if not buckets_to_delete:
                 raise ValueError(f"{contains_name} is not in S3 buckets.")
             await asyncio.gather(
@@ -225,7 +229,7 @@ async def delete_buckets_async(
 def time_logger(fn):
     """Decorator function decorates `main()` and `main_async()` function with timer."""
 
-    # check if free variable `fn` is a coroutine or not, then assign async function
+    # check if free variable `fn` is a coroutine or normal function, then assign async closure or func closure
     if asyncio.iscoroutinefunction(fn):
 
         async def inner():
@@ -236,6 +240,7 @@ def time_logger(fn):
                 + "\033[91m"
                 + f"Time elapsed: {perf_counter() - start_time:.2f} seconds"
                 + "\033[0m"
+                + "\n"
             )  # red color
 
         return inner
@@ -256,19 +261,21 @@ def time_logger(fn):
 
 @time_logger
 def main():
-    print("\033[36m" + "running synchronous functions")  # cyan color
+    print("\n" + "\033[36m" + "running synchronous functions")  # cyan color
     print(f"{'-' * 25}" + "\n" + "\033[0m")
-    print("current_s3_buckets", list_s3_bucket())  # show current list of s3 buckets
+    print(
+        "pre-existed s3_buckets:", list_s3_bucket()
+    )  # show current list of s3 buckets
     create_buckets(10, "boto3-bucket", 4)  # create s3 buckets
     print(
-        "\n" + "generated_bucket_names", bucket_name_generator.names
+        "\n" + "generated_bucket_names before deletion:", bucket_name_generator.names
     )  # show bucket names created
     delete_buckets(bucket_name_generator.names)  # delete newly-created s3 buckets
     print(
-        "\n" + "generated_bucket_names", bucket_name_generator.names
+        "\n" + "generated_bucket_names after deletion:", bucket_name_generator.names
     )  # bucket names should be empty now
     print(
-        "\n" + "current_s3_buckets", list_s3_bucket()
+        "\n" + "current s3_buckets:", list_s3_bucket()
     )  # show current list of s3 buckets
 
 
@@ -277,20 +284,22 @@ async def main_async():
     print("\n" + "\033[36m" + "running asynchronous functions")  # cyan color
     print(f"{'-' * 25}" + "\n" + "\033[0m")
     print(
-        "current_s3_buckets", await list_s3_bucket_async()
+        "pre-existed s3_buckets:", await list_s3_bucket_async()
     )  # show current list of s3 buckets
     await create_buckets_async(10, "async-boto3-bucket", 4)  # create s3 buckets
     print(
-        "\n" + "generated_bucket_names", bucket_name_generator_async.names
+        "\n" + "generated_bucket_names before deletion:",
+        bucket_name_generator_async.names,
     )  # show bucket names created
     await delete_buckets_async(
         bucket_name_generator_async.names
     )  # delete newly-created s3 buckets
     print(
-        "\n" + "generated_bucket_names", bucket_name_generator_async.names
+        "\n" + "generated_bucket_names after deletion:",
+        bucket_name_generator_async.names,
     )  # bucket names should be empty now
     print(
-        "\n" + "current_s3_buckets", await list_s3_bucket_async()
+        "\n" + "current s3_buckets:", await list_s3_bucket_async()
     )  # show current list of s3 buckets
 
 
