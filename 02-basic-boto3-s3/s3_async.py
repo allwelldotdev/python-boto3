@@ -229,9 +229,9 @@ def time_logger(fn):
     # check if free variable `fn` is a coroutine or normal function, then assign async closure or func closure
     if asyncio.iscoroutinefunction(fn):
 
-        async def inner():
+        async def inner(*args):
             start_time = perf_counter()
-            await fn()
+            await fn(*args)
             fn.time_to_run = perf_counter() - start_time
             print(
                 "\n"
@@ -244,9 +244,9 @@ def time_logger(fn):
         return inner
     else:
 
-        def inner():
+        def inner(*args):
             start_time = perf_counter()
-            fn()
+            fn(*args)
             fn.time_to_run = perf_counter() - start_time
             print(
                 "\n"
@@ -259,7 +259,7 @@ def time_logger(fn):
 
 
 @time_logger
-def main():
+def main(number_of_buckets):
     print(
         "\n" + "\033[36m" + "running synchronous functions",  # cyan color
         f"{'-' * 25}" + "\n" + "\033[0m",
@@ -268,7 +268,7 @@ def main():
     print(
         "pre-existed s3_buckets:", list_s3_bucket()
     )  # show current list of s3 buckets
-    create_buckets(10, "boto3-bucket", 4)  # create s3 buckets
+    create_buckets(number_of_buckets, "boto3-bucket", 4)  # create s3 buckets
     print(
         "\n" + "generated_bucket_names before deletion:", bucket_name_generator.names
     )  # show bucket names created
@@ -283,7 +283,7 @@ def main():
 
 
 @time_logger
-async def main_async():
+async def main_async(number_of_buckets):
     print(
         "\n" + "\033[36m" + "running asynchronous functions",  # cyan color
         f"{'-' * 25}" + "\n" + "\033[0m",
@@ -292,7 +292,9 @@ async def main_async():
     print(
         "pre-existed s3_buckets:", await list_s3_bucket_async()
     )  # show current list of s3 buckets
-    await create_buckets_async(10, "async-boto3-bucket", 4)  # create s3 buckets
+    await create_buckets_async(
+        number_of_buckets, "async-boto3-bucket", 4
+    )  # create s3 buckets
     print(
         "\n" + "generated_bucket_names before deletion:",
         bucket_name_generator_async.names,
@@ -330,8 +332,9 @@ def perf_diff(sync_time: float, async_time: float) -> float:
 
 
 if __name__ == "__main__":
-    main()  # run synchronous function
-    asyncio.run(main_async())  # run asynchronous functions
+    number_of_buckets = 10
+    main(number_of_buckets)  # run synchronous function
+    asyncio.run(main_async(number_of_buckets))  # run asynchronous functions
 
     # grab `time_to_run` function attribute from closures
     sync_time = main.__closure__[0].cell_contents.time_to_run
